@@ -172,7 +172,7 @@ func findRepeatingXorKey(input []byte, freqMap map[rune]float64, keySize int) []
 	return res
 }
 
-func aesEcb(ciphertext []byte, passphrase string) []byte {
+func aesEcbDecrypt(ciphertext []byte, passphrase string) []byte {
 	cipher, err := aes.NewCipher([]byte(passphrase))
 	if err != nil {
 		panic(err.Error())
@@ -186,6 +186,22 @@ func aesEcb(ciphertext []byte, passphrase string) []byte {
 		cipher.Decrypt(plaintext[i:], ciphertext[i:])
 	}
 	return plaintext
+}
+
+func aesEcbEncrypt(pt []byte, passphrase string) []byte {
+	cipher, err := aes.NewCipher([]byte(passphrase))
+	if err != nil {
+		panic(err.Error())
+	}
+	if len(pt)%cipher.BlockSize() != 0 {
+		panic("input requires padding")
+	}
+	ct := make([]byte, len(pt))
+
+	for i := 0; i < len(pt); i += cipher.BlockSize() {
+		cipher.Encrypt(ct[i:], pt[i:])
+	}
+	return ct
 }
 
 func detectECB(in []byte, blockSize int) bool {

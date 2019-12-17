@@ -144,13 +144,10 @@ func Test6(t *testing.T) {
 
 func Test7(t *testing.T) {
 	passphrase := "YELLOW SUBMARINE"
-	//bInB64 := readFile("7.txt", t)
-	//b := decodeBase64(string(bInB64), t)
-	//ptxt := aesEcb(b, passphrase)
-	ptxt := []byte("123456 123456789")
-	ctxt := aesEcb(ptxt, passphrase)
-	pt := aesEcb(ctxt, passphrase)
-	fmt.Println(string(pt))
+	bInB64 := readFile("7.txt", t)
+	b := decodeBase64(string(bInB64), t)
+	ptxt := aesEcbDecrypt(b, passphrase)
+	fmt.Println(string(ptxt))
 }
 
 func Test8(t *testing.T) {
