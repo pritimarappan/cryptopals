@@ -1,6 +1,9 @@
 package cryptopals
 
-import "crypto/aes"
+import (
+	"crypto/aes"
+	"crypto/rand"
+)
 
 func pkcs7Padding(in []byte, paddingLength int) []byte {
 	if paddingLength >= 256 {
@@ -48,4 +51,15 @@ func aesCbcDecrypt(ciphertext []byte, passphrase string, iv []byte) []byte {
 		iv = ciphertext[i : i+blockSize]
 	}
 	return plaintext
+}
+
+//Write a function to generate a random AES key; that's just 16 random bytes.
+func generateRandomBytes(numOfBytes int) []byte {
+
+	b := make([]byte, numOfBytes)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
