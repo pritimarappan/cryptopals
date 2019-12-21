@@ -3,6 +3,7 @@ package cryptopals
 import (
 	"crypto/aes"
 	"crypto/rand"
+	mathrand "math/rand"
 )
 
 func pkcs7Padding(in []byte, paddingLength int) []byte {
@@ -20,7 +21,7 @@ func pkcs7Padding(in []byte, paddingLength int) []byte {
 	//return (append(in, bytes.Repeat([]byte{byte(pad)}, pad)...))
 }
 
-func aesCbcEncrypt(plaintext []byte, passphrase string, iv []byte) []byte {
+func aesCbcEncrypt(plaintext []byte, passphrase []byte, iv []byte) []byte {
 
 	b, _ := aes.NewCipher([]byte(passphrase))
 	blockSize := b.BlockSize()
@@ -36,9 +37,9 @@ func aesCbcEncrypt(plaintext []byte, passphrase string, iv []byte) []byte {
 	return ciphertext
 }
 
-func aesCbcDecrypt(ciphertext []byte, passphrase string, iv []byte) []byte {
+func aesCbcDecrypt(ciphertext []byte, passphrase []byte, iv []byte) []byte {
 
-	b, _ := aes.NewCipher([]byte(passphrase))
+	b, _ := aes.NewCipher(passphrase)
 	blockSize := b.BlockSize()
 	if len(ciphertext)%blockSize != 0 {
 		panic("padding required for ciphertext")
@@ -62,4 +63,31 @@ func generateRandomBytes(numOfBytes int) []byte {
 		panic(err)
 	}
 	return b
+}
+
+func encryptionOracle() func([]byte) []byte {
+	encryptionKey := generateRandomBytes(16)
+
+	return func(ptxt []byte) []byte {
+		prefix := make([]byte, 5+mathrand.Intn(5))
+		_, err := rand.Read(prefix)
+		if err != nil {
+			panic(err)
+		}
+		suffix := make([]byte, 5+mathrand.Intn(5))
+		_, err = rand.Read(suffix)
+		if err != nil {
+			panic(err)
+		}
+		msg := append(append(prefix, ptxt...), suffix...)
+		msg = pkcs7Padding(msg, 16)
+
+		oracle := mathrand.Intn(2)
+
+		if oracle == 0 {
+			return aesEcbEncrypt(msg, encryptionKey)
+		}
+		return aesCbcEncrypt(msg, encryptionKey, generateRandomBytes(16))
+
+	}
 }

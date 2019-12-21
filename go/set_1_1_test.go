@@ -146,7 +146,7 @@ func Test7(t *testing.T) {
 	passphrase := "YELLOW SUBMARINE"
 	bInB64 := readFile("7.txt", t)
 	b := decodeBase64(string(bInB64), t)
-	ptxt := aesEcbDecrypt(b, passphrase)
+	ptxt := aesEcbDecrypt(b, []byte(passphrase))
 	fmt.Println(string(ptxt))
 }
 
