@@ -21,7 +21,7 @@ func Test10(t *testing.T) {
 	fmt.Println(string(ptxt2))
 
 	b64Ciphertext := string(readFile("10.txt", t))
-	ctxt3 := decodeBase64(b64Ciphertext, t)
+	ctxt3 := decodeBase64(b64Ciphertext)
 	ptxt3 := aesCbcDecrypt(ctxt3, []byte(key), iv)
 	fmt.Println(string(ptxt3))
 }
@@ -40,4 +40,39 @@ func Test11(t *testing.T) {
 		}
 	}
 	fmt.Println(ecb, cbc)
+}
+
+func Test12(t *testing.T) {
+	suffix := decodeBase64(
+		`Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
+aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
+dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
+YnkK`)
+
+	oracle := simpleECBEncryption(suffix)
+	blockSize := detectBlockSize(oracle)
+	ecbDetected := false
+
+	for i := 1; i < 32; i++ {
+
+		out := oracle(bytes.Repeat([]byte{'A'}, i*blockSize))
+		if detectECB(out, blockSize) {
+			ecbDetected = true
+			break
+		}
+	}
+	if !ecbDetected {
+		panic("ecb not detected")
+	}
+
+	dict := buildDictToBreakEcb(oracle, blockSize)
+
+	ptxt := make([]byte, len(suffix))
+	msg := bytes.Repeat([]byte{'A'}, blockSize)
+	for i := 0; i < len(suffix); i++ {
+		msg[blockSize-1] = suffix[i]
+		out := string(oracle(msg)[:blockSize-1])
+		ptxt[i] = dict[out]
+	}
+	fmt.Println(string(ptxt))
 }

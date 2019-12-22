@@ -2,7 +2,6 @@ package cryptopals
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -134,7 +133,7 @@ func Test6(t *testing.T) {
 
 	//build freq map
 	freqMap := buildFrequencyMap(string(b))
-	b = decodeBase64(string(readFile("6.txt", t)), t)
+	b = decodeBase64(string(readFile("6.txt", t)))
 	scoreList, keys := findRepeatingXorKeySize(b)
 
 	key := findRepeatingXorKey(b, freqMap, scoreList[keys[0]])
@@ -145,7 +144,7 @@ func Test6(t *testing.T) {
 func Test7(t *testing.T) {
 	passphrase := "YELLOW SUBMARINE"
 	bInB64 := readFile("7.txt", t)
-	b := decodeBase64(string(bInB64), t)
+	b := decodeBase64(string(bInB64))
 	ptxt := aesEcbDecrypt(b, []byte(passphrase))
 	fmt.Println(string(ptxt))
 }
@@ -157,13 +156,4 @@ func Test8(t *testing.T) {
 			fmt.Println("line encrypted with ECB", i+1)
 		}
 	}
-}
-
-func decodeBase64(s string, t *testing.T) []byte {
-	t.Helper()
-	v, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		t.Fatal("failed to decode base64:", s)
-	}
-	return v
 }

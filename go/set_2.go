@@ -1,6 +1,7 @@
 package cryptopals
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/rand"
 	mathrand "math/rand"
@@ -90,4 +91,49 @@ func encryptionOracle() func([]byte) []byte {
 		return aesCbcEncrypt(msg, encryptionKey, generateRandomBytes(16))
 
 	}
+}
+
+func simpleECBEncryption(suffix []byte) func([]byte) []byte {
+	encryptionKey := generateRandomBytes(16)
+
+	return func(in []byte) []byte {
+
+		msg := append(in, suffix...)
+		msg = pkcs7Padding(msg, 16)
+
+		return aesEcbEncrypt(msg, encryptionKey)
+
+	}
+}
+
+func detectBlockSize(oracle func([]byte) []byte) int {
+	blockSize := 0
+	temp := len(oracle(bytes.Repeat([]byte{42}, 1)))
+	for i := 2; i < 32; i++ {
+		out := oracle(bytes.Repeat([]byte{42}, i))
+
+		if len(out)-temp > 0 {
+			blockSize = len(out) - temp
+			break
+		} else {
+			temp = len(out)
+		}
+	}
+	if blockSize == 0 {
+		panic("block size not found")
+	}
+	return blockSize
+}
+
+func buildDictToBreakEcb(oracle func([]byte) []byte, blockSize int) map[string]byte {
+	dict := make(map[string]byte)
+
+	msg := bytes.Repeat([]byte{'A'}, blockSize)
+	for b := 0; b < 256; b++ {
+		msg[blockSize-1] = byte(b)
+		out := string(oracle(msg)[:blockSize-1])
+		dict[out] = byte(b)
+	}
+
+	return dict
 }

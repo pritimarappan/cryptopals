@@ -31,6 +31,14 @@ func bytesToB64(inputData []byte) (string, error) {
 	return str, nil
 }
 
+func decodeBase64(s string) []byte {
+	v, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic("failed to decode base64:")
+	}
+	return v
+}
+
 func xor(ip1 []byte, ip2 []byte) []byte {
 	if len(ip1) != len(ip2) {
 		panic("xor: unequal length for input")
