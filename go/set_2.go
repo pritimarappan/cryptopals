@@ -5,6 +5,8 @@ import (
 	"crypto/aes"
 	"crypto/rand"
 	mathrand "math/rand"
+	"net/url"
+	"strconv"
 )
 
 func pkcs7Padding(in []byte, paddingLength int) []byte {
@@ -27,7 +29,7 @@ func aesCbcEncrypt(plaintext []byte, passphrase []byte, iv []byte) []byte {
 	b, _ := aes.NewCipher([]byte(passphrase))
 	blockSize := b.BlockSize()
 	if len(plaintext)%blockSize != 0 {
-		panic("padding required for plain text")
+		panic("padding required for plain text in aesCbcEncrypt")
 	}
 	ciphertext := make([]byte, len(plaintext))
 
@@ -43,7 +45,7 @@ func aesCbcDecrypt(ciphertext []byte, passphrase []byte, iv []byte) []byte {
 	b, _ := aes.NewCipher(passphrase)
 	blockSize := b.BlockSize()
 	if len(ciphertext)%blockSize != 0 {
-		panic("padding required for ciphertext")
+		panic("padding required for ciphertext in aesCbcDecrypt")
 	}
 
 	plaintext := make([]byte, len(ciphertext))
@@ -136,4 +138,41 @@ func buildDictToBreakEcb(oracle func([]byte) []byte, blockSize int) map[string]b
 	}
 
 	return dict
+}
+
+func profileFor(in string) string {
+	v := url.Values{}
+	v.Set("email", in)
+	v.Add("uid", strconv.Itoa(mathrand.Intn(100)))
+	v.Add("role", "user")
+	return v.Encode()
+}
+
+func oracles() (
+	encryptionOracle func([]byte) []byte,
+	decryptionOracle func([]byte) []byte,
+) {
+	encryptionKey := generateRandomBytes(16)
+
+	encryptionOracle = func(in []byte) []byte {
+		msg := pkcs7Padding(in, 16)
+		return aesEcbEncrypt(msg, encryptionKey)
+	}
+
+	decryptionOracle = func(in []byte) []byte {
+		return aesEcbDecrypt(in, encryptionKey)
+	}
+	return
+}
+
+func isAdmin(profile string) bool {
+
+	values, err := url.ParseQuery(profile)
+	if err != nil {
+		panic("error in decoding profile")
+	}
+	if values.Get("role") == "admin" {
+		return true
+	}
+	return false
 }

@@ -186,7 +186,7 @@ func aesEcbDecrypt(ciphertext []byte, passphrase []byte) []byte {
 		panic(err.Error())
 	}
 	if len(ciphertext)%cipher.BlockSize() != 0 {
-		panic("input requires padding")
+		panic("input requires padding in aesEcbDecrypt")
 	}
 	plaintext := make([]byte, len(ciphertext))
 
@@ -202,7 +202,7 @@ func aesEcbEncrypt(pt []byte, passphrase []byte) []byte {
 		panic(err.Error())
 	}
 	if len(pt)%cipher.BlockSize() != 0 {
-		panic("input requires padding")
+		panic("input requires padding in aesEcbEncrypt")
 	}
 	ct := make([]byte, len(pt))
 

@@ -76,3 +76,12 @@ YnkK`)
 	}
 	fmt.Println(string(ptxt))
 }
+
+func Test13(t *testing.T) {
+	encryptionOracle, decryptionOracle := oracles()
+	profile := profileFor("foo@bar.com")
+	fmt.Println(profile)
+	encryptedProfile := encryptionOracle([]byte(profile))
+	b := isAdmin(string(decryptionOracle(encryptedProfile)))
+	fmt.Println(b)
+}
