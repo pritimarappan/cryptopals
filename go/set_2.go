@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/rand"
+	"fmt"
 	mathrand "math/rand"
 	"net/url"
 	"strconv"
@@ -143,36 +144,34 @@ func buildDictToBreakEcb(oracle func([]byte) []byte, blockSize int) map[string]b
 func profileFor(in string) string {
 	v := url.Values{}
 	v.Set("email", in)
-	v.Add("uid", strconv.Itoa(mathrand.Intn(100)))
+	v.Add("Uid", strconv.Itoa(mathrand.Intn(100)))
 	v.Add("role", "user")
+	fmt.Println(v.Encode())
 	return v.Encode()
 }
 
 func oracles() (
-	encryptionOracle func([]byte) []byte,
-	decryptionOracle func([]byte) []byte,
+	getEncryptedProfile func([]byte) []byte,
+	isAdmin func([]byte) bool,
 ) {
 	encryptionKey := generateRandomBytes(16)
 
-	encryptionOracle = func(in []byte) []byte {
-		msg := pkcs7Padding(in, 16)
+	getEncryptedProfile = func(in []byte) []byte {
+		msg := []byte(profileFor(string(in)))
+		msg = pkcs7Padding([]byte(msg), 16)
 		return aesEcbEncrypt(msg, encryptionKey)
 	}
 
-	decryptionOracle = func(in []byte) []byte {
-		return aesEcbDecrypt(in, encryptionKey)
+	isAdmin = func(in []byte) bool {
+		decryptedProfile := aesEcbDecrypt(in, encryptionKey)
+		values, err := url.ParseQuery(string(decryptedProfile))
+		if err != nil {
+			panic("error in decoding profile")
+		}
+		if values.Get("role") == "admin" {
+			return true
+		}
+		return false
 	}
 	return
-}
-
-func isAdmin(profile string) bool {
-
-	values, err := url.ParseQuery(profile)
-	if err != nil {
-		panic("error in decoding profile")
-	}
-	if values.Get("role") == "admin" {
-		return true
-	}
-	return false
 }
