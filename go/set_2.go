@@ -144,7 +144,7 @@ func buildDictToBreakEcb(oracle func([]byte) []byte, blockSize int) map[string]b
 func profileFor(in string) string {
 	v := url.Values{}
 	v.Set("email", in)
-	v.Add("Uid", strconv.Itoa(mathrand.Intn(100)))
+	v.Add("uid", strconv.Itoa(mathrand.Intn(100)))
 	v.Add("role", "user")
 	fmt.Println(v.Encode())
 	return v.Encode()
