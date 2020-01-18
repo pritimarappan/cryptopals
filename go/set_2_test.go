@@ -3,7 +3,6 @@ package cryptopals
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"testing"
 )
 
@@ -79,26 +78,15 @@ YnkK`)
 }
 
 func Test13(t *testing.T) {
-	getEncryptedProfile, _ := oracles()
-	encryptedProfile := getEncryptedProfile([]byte("AAAAA&role=admin"))
-	fmt.Println(bytesToB64(encryptedProfile))
+	getEncryptedProfile, isAdmin := oracles()
 
-	start := "Uid=81&email="
-
-	genBlock := func(prefix string) string {
-		msg := strings.Repeat("A", 16-len(start)) + prefix
-		return getEncryptedProfile(msg)[16:32]
+	temp := getEncryptedProfile([]byte("AAAAAAAAAAAAA"))
+	block1 := temp[0:32]                                     //Uid=81&email=AAAAAAAAAAAAA&role=
+	block2 := getEncryptedProfile([]byte("AAAadmin"))[16:32] //admin&role=user
+	//Uid=81&email=AAAAAAAAAAAAA&role=admin&role=user
+	testBlock := append(block1, block2...)
+	if isAdmin(testBlock) {
+		fmt.Println("GOAT")
 	}
-
-	//Uid=81&email=AAAAA
-	//AAAAAAAAAA&role=
-	//admin&role=user&
-
-	//Uid=81&email=AAAAAAAAAAAAAAA&role=admin&role=use
-
-	temp := getEncryptedProfile("AAAAAAAAAAAAAAA")[0:16]
-	block1 := temp[0:16]
-	block2 := temp[16:32]
-	block3 := genBlock("admin&role=use")
 
 }

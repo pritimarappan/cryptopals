@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/rand"
-	"fmt"
 	mathrand "math/rand"
 	"net/url"
 	"strconv"
@@ -146,7 +145,6 @@ func profileFor(in string) string {
 	v.Set("email", in)
 	v.Add("Uid", strconv.Itoa(mathrand.Intn(100)))
 	v.Add("role", "user")
-	fmt.Println(v.Encode())
 	return v.Encode()
 }
 
