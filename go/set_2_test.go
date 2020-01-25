@@ -88,5 +88,38 @@ func Test13(t *testing.T) {
 	if isAdmin(testBlock) {
 		fmt.Println("GOAT")
 	}
+}
+func Test14(t *testing.T) {
+	suffix := decodeBase64(
+		`Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg
+aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq
+dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg
+YnkK`)
+
+	oracle := harderECBEncryption(suffix)
+	blockSize := detectBlockSize(oracle)
+	blockIndex, prefixLen := 0, 0
+	for A := 0; A < 200; A++ {
+
+		msg := bytes.Repeat([]byte{'A'}, A)
+		blockIndex = findRepeatingBlock(oracle(msg), blockSize)
+		if blockIndex != -1 {
+			prefixLen = (blockIndex * blockSize) - (A - blockSize*2)
+			break
+		}
+	}
+
+	//fmt.Println("prefixLen   ", prefixLen)
+
+	dict := buildDictToBreakEcbWithPrefix(oracle, blockSize, prefixLen)
+
+	ptxt := make([]byte, len(suffix))
+	msg := bytes.Repeat([]byte{'A'}, blockSize-prefixLen)
+	for i := 0; i < len(suffix); i++ {
+		msg[blockSize-prefixLen-1] = suffix[i]
+		out := string(oracle(msg)[:blockSize-1])
+		ptxt[i] = dict[out]
+	}
+	fmt.Println(string(ptxt))
 
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/rand"
+	"fmt"
 	mathrand "math/rand"
 	"net/url"
 	"strconv"
@@ -172,4 +173,41 @@ func oracles() (
 		return false
 	}
 	return
+}
+
+func harderECBEncryption(suffix []byte) func([]byte) []byte {
+	encryptionKey := generateRandomBytes(16)
+
+	randomPrefix := generateRandomBytes(mathrand.Intn(10))
+	fmt.Println(len(randomPrefix))
+	return func(in []byte) []byte {
+
+		msg := append(randomPrefix, append(in, suffix...)...)
+		msg = pkcs7Padding(msg, 16)
+
+		return aesEcbEncrypt(msg, encryptionKey)
+
+	}
+}
+
+func findRepeatingBlock(in []byte, blockSize int) int {
+
+	for i := 0; i+2 <= len(in)/blockSize; i++ {
+		if bytes.Equal(in[blockSize*i:blockSize*(i+1)], in[blockSize*(i+1):blockSize*(i+2)]) {
+			return i
+		}
+	}
+	return -1
+}
+
+func buildDictToBreakEcbWithPrefix(oracle func([]byte) []byte, blockSize int, prefixLen int) map[string]byte {
+	dict := make(map[string]byte)
+
+	msg := bytes.Repeat([]byte{'A'}, blockSize-prefixLen)
+	for b := 0; b < 256; b++ {
+		msg[blockSize-prefixLen-1] = byte(b)
+		out := string(oracle(msg)[:blockSize-1])
+		dict[out] = byte(b)
+	}
+	return dict
 }
