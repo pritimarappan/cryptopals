@@ -123,3 +123,21 @@ YnkK`)
 	fmt.Println(string(ptxt))
 
 }
+func Test15(t *testing.T) {
+	ptxt := []byte("ICE ICE BABY\x04\x04\x04\x04")
+	fmt.Println(string(pkcs7UnPadding(ptxt)))
+	// ptxt = []byte("ICE ICE BABY\x05\x05\x05\x05")
+	// fmt.Println(string(pkcs7UnPadding(ptxt)))
+	ptxt = []byte("ICE ICE BABY\x01\x02\x03\x04")
+	fmt.Println(string(pkcs7UnPadding(ptxt)))
+}
+
+func Test16(t *testing.T) {
+	generateCookie, isAdmin := getCbcOracles()
+
+	if isAdmin(generateCookie([]byte(";admin=true;"))) {
+		fmt.Println("this shouldn't work")
+	}
+	fmt.Println(isAdmin(makeCBCAdminCookie(generateCookie)))
+
+}

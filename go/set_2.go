@@ -8,6 +8,7 @@ import (
 	mathrand "math/rand"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 func pkcs7Padding(in []byte, paddingLength int) []byte {
@@ -210,4 +211,63 @@ func buildDictToBreakEcbWithPrefix(oracle func([]byte) []byte, blockSize int, pr
 		dict[out] = byte(b)
 	}
 	return dict
+}
+
+func pkcs7UnPadding(in []byte) []byte {
+
+	if len(in) == 0 {
+		return in
+	}
+	lastByte := in[len(in)-1]
+	if int(lastByte) < 1 || int(lastByte) > len(in) {
+		return in
+	}
+	for i := 0; i < int(lastByte); i++ {
+		if int(in[len(in)-1-i]) != int(lastByte) {
+			panic("invalid padding")
+		}
+	}
+	return in[:len(in)-int(lastByte)]
+}
+
+func getCbcOracles() (
+	generateCookie func([]byte) []byte,
+	isAdmin func([]byte) bool,
+) {
+	encryptionKey := generateRandomBytes(16)
+	prefix := "comment1=cooking%20MCs;userdata="
+	suffix := ";comment2=%20like%20a%20pound%20of%20bacon"
+	iv := generateRandomBytes(16)
+	generateCookie = func(in []byte) []byte {
+		encodedIn := bytes.Replace(in, []byte("="), []byte("%3D"), -1)
+		encodedIn = bytes.Replace(encodedIn, []byte(";"), []byte("%3B"), -1)
+		msg := append(append([]byte(prefix), encodedIn...), []byte(suffix)...)
+		msg = pkcs7Padding(msg, 16)
+
+		return aesCbcEncrypt(msg, encryptionKey, iv)
+	}
+
+	isAdmin = func(in []byte) bool {
+		decryptedProfile := string(pkcs7UnPadding(aesCbcDecrypt(in, encryptionKey, iv)))
+		fmt.Println(decryptedProfile)
+		return strings.Contains(decryptedProfile, ";admin=true;")
+	}
+	return
+}
+
+func xorString(a, b string) string {
+	return string(xor([]byte(a), []byte(b)))
+}
+
+func makeCBCAdminCookie(generateCookie func([]byte) []byte) []byte {
+	//comment1=cooking%20MCs;userdata=AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA
+	prefix := "comment1=cooking%20MCs;userdata="
+	target := "AA;admin=true;AA"
+	msg := bytes.Repeat([]byte{'A'}, 16*2)
+	out := generateCookie(msg)
+	block1 := out[:len(prefix)]                 //comment1=cooking%20MCs;userdata=
+	block2 := out[len(prefix) : len(prefix)+16] //AAAAAAAAAAAAAAAA
+	block3 := out[len(prefix)+16:]              //";comment2=%20like%20a%20pound%20of%20bacon"
+	block2 = xor(block2, xor(bytes.Repeat([]byte{'A'}, 16), []byte(target)))
+	return append(append(block1, block2...), block3...)
 }
