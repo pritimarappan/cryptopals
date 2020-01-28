@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	mathrand "math/rand"
 	"net/url"
@@ -213,21 +214,21 @@ func buildDictToBreakEcbWithPrefix(oracle func([]byte) []byte, blockSize int, pr
 	return dict
 }
 
-func pkcs7UnPadding(in []byte) []byte {
+func pkcs7UnPadding(in []byte) ([]byte, error) {
 
 	if len(in) == 0 {
-		return in
+		return in, nil
 	}
 	lastByte := in[len(in)-1]
 	if int(lastByte) < 1 || int(lastByte) > len(in) {
-		return in
+		return in, nil
 	}
 	for i := 0; i < int(lastByte); i++ {
 		if int(in[len(in)-1-i]) != int(lastByte) {
-			panic("invalid padding")
+			return nil, errors.New("invalid padding")
 		}
 	}
-	return in[:len(in)-int(lastByte)]
+	return in[:len(in)-int(lastByte)], nil
 }
 
 func getCbcOracles() (
@@ -248,7 +249,11 @@ func getCbcOracles() (
 	}
 
 	isAdmin = func(in []byte) bool {
-		decryptedProfile := string(pkcs7UnPadding(aesCbcDecrypt(in, encryptionKey, iv)))
+		decryptedProfileArr, err := pkcs7UnPadding(aesCbcDecrypt(in, encryptionKey, iv))
+		if err != nil {
+			fmt.Println("Unpadding errors")
+		}
+		decryptedProfile := string(decryptedProfileArr)
 		fmt.Println(decryptedProfile)
 		return strings.Contains(decryptedProfile, ";admin=true;")
 	}

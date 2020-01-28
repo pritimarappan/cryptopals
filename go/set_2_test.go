@@ -124,12 +124,21 @@ YnkK`)
 
 }
 func Test15(t *testing.T) {
-	ptxt := []byte("ICE ICE BABY\x04\x04\x04\x04")
-	fmt.Println(string(pkcs7UnPadding(ptxt)))
+	in := []byte("ICE ICE BABY\x04\x04\x04\x04")
+
+	out, err := pkcs7UnPadding(in)
+	if err != nil {
+		fmt.Println("Unpadding errors")
+	}
+	fmt.Println(string(out))
 	// ptxt = []byte("ICE ICE BABY\x05\x05\x05\x05")
 	// fmt.Println(string(pkcs7UnPadding(ptxt)))
-	ptxt = []byte("ICE ICE BABY\x01\x02\x03\x04")
-	fmt.Println(string(pkcs7UnPadding(ptxt)))
+	in = []byte("ICE ICE BABY\x01\x02\x03\x04")
+	out, err = pkcs7UnPadding(in)
+	if err != nil {
+		fmt.Println("Unpadding errors")
+	}
+	fmt.Println(string(out))
 }
 
 func Test16(t *testing.T) {
