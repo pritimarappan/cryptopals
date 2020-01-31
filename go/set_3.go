@@ -1,10 +1,13 @@
 package cryptopals
 
-import mathrand "math/rand"
+import (
+	"fmt"
+	mathrand "math/rand"
+)
 
-func cbcPaddingOracleEncryption() (
-	encryptionOracle func([]byte) (ciphertext []byte, iv []byte),
-	decryptionOracle func([]byte, []byte) bool) {
+func cbcPaddingOracles() (
+	encryptionOracle func() (ciphertext []byte, iv []byte),
+	paddingOracle func([]byte, []byte) bool) {
 	list := [10]string{
 		"MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
 		"MDAwMDAxV2l0aCB0aGUgYmFzcyBraWNrZWQgaW4gYW5kIHRoZSBWZWdhJ3MgYXJlIHB1bXBpbic=",
@@ -19,19 +22,20 @@ func cbcPaddingOracleEncryption() (
 
 	encryptionKey := generateRandomBytes(16)
 
-	encryptionOracle = func(in []byte) (ciphertext []byte, iv []byte) {
-		ptxt := list[mathrand.Intn(9)]
-		iv = generateRandomBytes(16)
+	encryptionOracle = func() (ciphertext []byte, iv []byte) {
+		ptxt := decodeBase64(list[mathrand.Intn(len(list))])
+		fmt.Println(ptxt)
+		//iv = generateRandomBytes(16)
+		iv = make([]byte, 16)
 		ciphertext = aesCbcEncrypt(pkcs7Padding([]byte(ptxt), 16), encryptionKey, iv)
 		return
 	}
-	decryptionOracle = func(ciphertext []byte, iv []byte) bool {
-		ptxt := aesCbcDecrypt(ciphertext, encryptionKey, iv)
-		_, err := pkcs7UnPadding(ptxt)
-		if err != nil {
-			return false
+	paddingOracle = func(ciphertext []byte, iv []byte) bool {
+		ptxt, _ := pkcs7UnPadding(aesCbcDecrypt(ciphertext, encryptionKey, iv))
+		if ptxt != nil {
+			return true
 		}
-		return true
+		return false
 	}
 	return
 }

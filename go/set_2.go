@@ -221,7 +221,7 @@ func pkcs7UnPadding(in []byte) ([]byte, error) {
 	}
 	lastByte := in[len(in)-1]
 	if int(lastByte) < 1 || int(lastByte) > len(in) {
-		return in, nil
+		return nil, nil
 	}
 	for i := 0; i < int(lastByte); i++ {
 		if int(in[len(in)-1-i]) != int(lastByte) {
