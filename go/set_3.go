@@ -1,9 +1,6 @@
 package cryptopals
 
-import (
-	"fmt"
-	mathrand "math/rand"
-)
+import mathrand "math/rand"
 
 func cbcPaddingOracles() (
 	encryptionOracle func() (ciphertext []byte, iv []byte),
@@ -24,13 +21,12 @@ func cbcPaddingOracles() (
 
 	encryptionOracle = func() (ciphertext []byte, iv []byte) {
 		ptxt := decodeBase64(list[mathrand.Intn(len(list))])
-		fmt.Println(ptxt)
-		//iv = generateRandomBytes(16)
-		iv = make([]byte, 16)
+		iv = generateRandomBytes(16)
 		ciphertext = aesCbcEncrypt(pkcs7Padding([]byte(ptxt), 16), encryptionKey, iv)
 		return
 	}
 	paddingOracle = func(ciphertext []byte, iv []byte) bool {
+
 		ptxt, _ := pkcs7UnPadding(aesCbcDecrypt(ciphertext, encryptionKey, iv))
 		if ptxt != nil {
 			return true
@@ -38,4 +34,32 @@ func cbcPaddingOracles() (
 		return false
 	}
 	return
+}
+
+func attackCbcPaddingOracle(ctxt []byte, paddingOracle func([]byte, []byte) bool) []byte {
+
+	getPtxtBytes := func(foundBytes []byte) []byte {
+		ct := make([]byte, 32)
+		ptxt := append([]byte{0}, foundBytes...)
+
+		for ptxtGuess := 0; ptxtGuess < 256; ptxtGuess++ {
+
+			copy(ct, ctxt)
+			for i := 1; i <= len(foundBytes); i++ {
+				ct[len(ct)-16-i] ^= byte(len(foundBytes)+1) ^ byte(foundBytes[len(foundBytes)-i])
+			}
+
+			ct[len(ct)-16-(len(foundBytes)+1)] ^= byte(len(foundBytes)+1) ^ byte(ptxtGuess)
+			if paddingOracle(ct[16:], ct[0:16]) && (byte(ptxtGuess)^byte(1) != byte(0)) {
+				ptxt[0] = byte(ptxtGuess)
+			}
+		}
+		return ptxt
+	}
+	var ptxt []byte
+	for i := 0; i < 16; i++ {
+		ptxt = getPtxtBytes(ptxt)
+	}
+
+	return ptxt
 }
