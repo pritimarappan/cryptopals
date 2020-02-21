@@ -89,7 +89,7 @@ func aesCtrEncrypt(ptxt []byte, passphrase []byte, nonce []byte) []byte {
 		}
 
 		//increment counter
-		temp := int64(binary.LittleEndian.Uint64(counter))
+		temp := binary.LittleEndian.Uint64(counter)
 		temp++
 		binary.LittleEndian.PutUint64(counter, uint64(temp))
 	}
