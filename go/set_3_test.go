@@ -16,3 +16,10 @@ func Test17(t *testing.T) {
 	}
 	fmt.Println(string(ptxt))
 }
+
+func Test18(t *testing.T) {
+	key := []byte("YELLOW SUBMARINE")
+	nonce := make([]byte, 8)
+	ctxt := decodeBase64("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==")
+	fmt.Println(string(aesCtrDecrypt(ctxt, key, nonce)))
+}

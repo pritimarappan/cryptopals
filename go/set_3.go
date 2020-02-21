@@ -1,6 +1,10 @@
 package cryptopals
 
-import mathrand "math/rand"
+import (
+	"crypto/aes"
+	"encoding/binary"
+	mathrand "math/rand"
+)
 
 func cbcPaddingOracles() (
 	encryptionOracle func() (ciphertext []byte, iv []byte),
@@ -63,3 +67,34 @@ func attackCbcPaddingOracle(ctxt []byte, paddingOracle func([]byte, []byte) bool
 
 	return ptxt
 }
+
+func aesCtrEncrypt(ptxt []byte, passphrase []byte, nonce []byte) []byte {
+
+	b, _ := aes.NewCipher([]byte(passphrase))
+	blockSize := b.BlockSize()
+	counter := make([]byte, 8)
+	var ctxt []byte
+
+	for i := 0; i < len(ptxt); i += blockSize {
+
+		//append nonce and counter
+		src := append(nonce, counter...)
+
+		dst := make([]byte, blockSize)
+		b.Encrypt(dst, src)
+		if (i + blockSize) < len(ptxt) {
+			ctxt = append(ctxt, xor(dst, ptxt[i:i+blockSize])...)
+		} else {
+			ctxt = append(ctxt, xor(dst[0:len(ptxt[i:])], ptxt[i:])...)
+		}
+
+		//increment counter
+		temp := int64(binary.LittleEndian.Uint64(counter))
+		temp++
+		binary.LittleEndian.PutUint64(counter, uint64(temp))
+	}
+
+	return ctxt
+}
+
+var aesCtrDecrypt = aesCtrEncrypt
