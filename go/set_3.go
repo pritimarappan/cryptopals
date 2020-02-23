@@ -98,3 +98,37 @@ func aesCtrEncrypt(ptxt []byte, passphrase []byte, nonce []byte) []byte {
 }
 
 var aesCtrDecrypt = aesCtrEncrypt
+
+func getctrEncryptionOracle() (
+	ctrEncryptionOracle func([]byte) []byte,
+) {
+	encryptionKey := generateRandomBytes(BLOCKSIZE)
+	nonce := make([]byte, 8)
+
+	ctrEncryptionOracle = func(in []byte) []byte {
+		return aesCtrEncrypt(in, encryptionKey, nonce)
+	}
+	return
+}
+
+func breakFixedNonceCTR(ctxts [][]byte, freqMap map[rune]float64) []byte {
+
+	var xorKey []byte
+	var longestLen = 0
+	for _, ctxt := range ctxts {
+		if len(ctxt) > longestLen {
+			longestLen = len(ctxt)
+		}
+	}
+	bs := 1
+	for i := 0; i < longestLen; i += bs {
+		var column []byte
+		for _, ctxt := range ctxts {
+			if (i + bs) < len(ctxt) {
+				column = append(column, ctxt[i:i+bs]...)
+			}
+		}
+		xorKey = append(xorKey, findRepeatingXorKey(column, freqMap, bs)...)
+	}
+	return xorKey
+}

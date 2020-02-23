@@ -12,6 +12,9 @@ import (
 	"strings"
 )
 
+//BLOCKSIZE is the encryption blocksize
+const BLOCKSIZE = 16
+
 func pkcs7Padding(in []byte, paddingLength int) []byte {
 	if paddingLength >= 256 {
 		panic("Invalid padding length for PKCS7")
@@ -72,7 +75,7 @@ func generateRandomBytes(numOfBytes int) []byte {
 }
 
 func encryptionOracle() func([]byte) []byte {
-	encryptionKey := generateRandomBytes(16)
+	encryptionKey := generateRandomBytes(BLOCKSIZE)
 
 	return func(ptxt []byte) []byte {
 		prefix := make([]byte, 5+mathrand.Intn(5))
@@ -93,13 +96,13 @@ func encryptionOracle() func([]byte) []byte {
 		if oracle == 0 {
 			return aesEcbEncrypt(msg, encryptionKey)
 		}
-		return aesCbcEncrypt(msg, encryptionKey, generateRandomBytes(16))
+		return aesCbcEncrypt(msg, encryptionKey, generateRandomBytes(BLOCKSIZE))
 
 	}
 }
 
 func simpleECBEncryption(suffix []byte) func([]byte) []byte {
-	encryptionKey := generateRandomBytes(16)
+	encryptionKey := generateRandomBytes(BLOCKSIZE)
 
 	return func(in []byte) []byte {
 
@@ -155,7 +158,7 @@ func oracles() (
 	getEncryptedProfile func([]byte) []byte,
 	isAdmin func([]byte) bool,
 ) {
-	encryptionKey := generateRandomBytes(16)
+	encryptionKey := generateRandomBytes(BLOCKSIZE)
 
 	getEncryptedProfile = func(in []byte) []byte {
 		msg := []byte(profileFor(string(in)))
@@ -178,7 +181,7 @@ func oracles() (
 }
 
 func harderECBEncryption(suffix []byte) func([]byte) []byte {
-	encryptionKey := generateRandomBytes(16)
+	encryptionKey := generateRandomBytes(BLOCKSIZE)
 
 	randomPrefix := generateRandomBytes(mathrand.Intn(10))
 	fmt.Println(len(randomPrefix))
@@ -235,15 +238,15 @@ func getCbcOracles() (
 	generateCookie func([]byte) []byte,
 	isAdmin func([]byte) bool,
 ) {
-	encryptionKey := generateRandomBytes(16)
+	encryptionKey := generateRandomBytes(BLOCKSIZE)
 	prefix := "comment1=cooking%20MCs;userdata="
 	suffix := ";comment2=%20like%20a%20pound%20of%20bacon"
-	iv := generateRandomBytes(16)
+	iv := generateRandomBytes(BLOCKSIZE)
 	generateCookie = func(in []byte) []byte {
 		encodedIn := bytes.Replace(in, []byte("="), []byte("%3D"), -1)
 		encodedIn = bytes.Replace(encodedIn, []byte(";"), []byte("%3B"), -1)
 		msg := append(append([]byte(prefix), encodedIn...), []byte(suffix)...)
-		msg = pkcs7Padding(msg, 16)
+		msg = pkcs7Padding(msg, BLOCKSIZE)
 
 		return aesCbcEncrypt(msg, encryptionKey, iv)
 	}

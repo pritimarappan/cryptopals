@@ -162,7 +162,7 @@ func findRepeatingXorKeySize(input []byte) (map[float64]int, []float64) {
 
 func findRepeatingXorKey(input []byte, freqMap map[rune]float64, keySize int) []byte {
 
-	fmt.Println("key size: ", keySize)
+	//fmt.Println("key size: ", keySize)
 	var res = make([]byte, keySize)
 	var block = make([]byte, (len(input)+keySize-1)/keySize)
 
