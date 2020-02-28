@@ -3,7 +3,9 @@ package cryptopals
 import (
 	"crypto/aes"
 	"encoding/binary"
+	"fmt"
 	mathrand "math/rand"
+	"time"
 )
 
 func cbcPaddingOracles() (
@@ -131,4 +133,119 @@ func breakFixedNonceCTR(ctxts [][]byte, freqMap map[rune]float64) []byte {
 		xorKey = append(xorKey, findRepeatingXorKey(column, freqMap, bs)...)
 	}
 	return xorKey
+}
+
+//W ...
+var W = 32
+
+//N ...
+const N = 624
+
+//M ...
+var M = 397
+
+//R ...
+var R = 31
+
+//A ...
+var A = 0x9908B0DF
+
+//F ...
+var F = 1812433253
+
+//U ...
+var U = 11
+
+//D ...
+var D = 0xFFFFFFFF
+
+//S ...
+var S = 7
+
+//B ...
+var B = 0x9D2C5680
+
+//T ...
+var T = 15
+
+//C ...
+var C = 0xEFC60000
+
+//L ...
+var L = 18
+
+//MaskLower ...
+var MaskLower = (1 << uint32(R)) - 1
+
+//MaskUpper ...
+var MaskUpper = (1 << uint32(R))
+
+type mt19937 struct {
+	MT    [N]uint32
+	index int
+}
+
+// Initialize the generator from a seed
+func initializeMT19937(seed uint32) *mt19937 {
+	m := &mt19937{index: N}
+
+	m.MT[0] = seed
+
+	for i := 1; i < N; i++ {
+		m.MT[i] = uint32(F)*(m.MT[i-1]^(m.MT[i-1]>>30)) + uint32(i)
+	}
+	return m
+}
+
+// Extract a tempered value based on MT[index]
+// calling twist() every n numbers
+func (m *mt19937) extractNumber() uint32 {
+	if m.index >= N {
+		if m.index > N {
+			panic("Generator was never seeded")
+			// Alternatively, seed with constant value; 5489 is used in reference C code[48]
+		}
+		m.twist()
+	}
+	//fmt.Println("index after twist ", m.index)
+	y := m.MT[m.index]
+	y = y ^ ((y >> uint32(U)) & uint32(D))
+	y = y ^ ((y << uint32(S)) & uint32(B))
+	y = y ^ ((y << uint32(T)) & uint32(C))
+	y = y ^ (y >> uint32(L))
+
+	m.index = m.index + 1
+	return y
+}
+
+// Generate the next n values from the series x_i
+func (m *mt19937) twist() {
+	for i := 0; i < N; i++ {
+		x := (m.MT[i] & uint32(MaskUpper)) + (m.MT[(i+1)%N] & uint32(MaskLower))
+		xA := x >> 1
+		if (x % 2) != 0 { // lowest bit of x is 1
+			xA = xA ^ uint32(A)
+		}
+		m.MT[i] = m.MT[(i+M)%N] ^ uint32(xA)
+	}
+
+	m.index = 0
+}
+
+func timeAsMT19937Seed() uint32 {
+	time.Sleep(time.Millisecond * time.Duration(40+mathrand.Intn(1000-40)))
+	originalSeed := time.Now().Unix()
+	fmt.Println(originalSeed)
+	return initializeMT19937(uint32(originalSeed)).extractNumber()
+}
+
+func crackMT19937Seed() uint32 {
+	mt := timeAsMT19937Seed()
+	testSeed := uint32(time.Now().Unix())
+	for {
+		if initializeMT19937(uint32(testSeed)).extractNumber() == mt {
+			return testSeed
+		}
+		testSeed--
+	}
 }
