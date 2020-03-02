@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 )
 
 func Test17(t *testing.T) {
@@ -428,4 +429,17 @@ func Test21(t *testing.T) {
 }
 func Test22(t *testing.T) {
 	fmt.Println(crackMT19937Seed())
+}
+
+func Test23(t *testing.T) {
+	mt := initializeMT19937(uint32(time.Now().Unix()))
+	clone := initializeMT19937(uint32(0))
+	for i := 0; i < 624; i++ {
+		clone.MT[i] = untemperMT19937(mt.extractNumber())
+	}
+	for i := 0; i < 624; i++ {
+		if clone.MT[i] != mt.MT[i] {
+			t.Fatalf("untemper failed for %d.", i)
+		}
+	}
 }

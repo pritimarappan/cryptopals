@@ -209,9 +209,9 @@ func (m *mt19937) extractNumber() uint32 {
 	}
 	//fmt.Println("index after twist ", m.index)
 	y := m.MT[m.index]
-	y = y ^ ((y >> uint32(U)) & uint32(D))
-	y = y ^ ((y << uint32(S)) & uint32(B))
-	y = y ^ ((y << uint32(T)) & uint32(C))
+	y = y ^ (y >> (uint32(U)) & uint32(D))
+	y = y ^ (y << (uint32(S)) & uint32(B))
+	y = y ^ (y << (uint32(T)) & uint32(C))
 	y = y ^ (y >> uint32(L))
 
 	m.index = m.index + 1
@@ -248,4 +248,14 @@ func crackMT19937Seed() uint32 {
 		}
 		testSeed--
 	}
+}
+
+func untemperMT19937(y uint32) uint32 {
+	y = y ^ y>>18
+	y = y ^ ((y << 15) & 4022730752)
+	for i := 0; i < 7; i++ {
+		y = y ^ (y << 7 & 0x9D2C5680)
+	}
+	y = y ^ y>>11 ^ y>>(11*2)
+	return y
 }
