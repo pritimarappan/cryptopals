@@ -2,6 +2,7 @@ package cryptopals
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"testing"
@@ -442,4 +443,12 @@ func Test23(t *testing.T) {
 			t.Fatalf("untemper failed for %d.", i)
 		}
 	}
+}
+
+func Test24(t *testing.T) {
+	payload := bytes.Repeat([]byte{42}, 14)
+	ctxt := mt19937Oracle(payload)
+	fmt.Println("recovered seed:  ", bruteForceMt19937Seed(ctxt, payload))
+	token := getMT19937Token()
+	fmt.Println("recovered seed for token: ", crackMT19937Token(token))
 }

@@ -1,7 +1,9 @@
 package cryptopals
 
 import (
+	"bytes"
 	"crypto/aes"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	mathrand "math/rand"
@@ -258,4 +260,56 @@ func untemperMT19937(y uint32) uint32 {
 	}
 	y = y ^ y>>11 ^ y>>(11*2)
 	return y
+}
+
+func encryptMT19937(in []byte, seed uint16) []byte {
+	mt := initializeMT19937(uint32(seed))
+	keyStream := make([]byte, len(in))
+	for i := 0; i < len(in); i++ {
+		keyStream[i] = uint8(mt.extractNumber())
+	}
+	return xor(in, keyStream)
+}
+
+func mt19937Oracle(in []byte) []byte {
+	prefix := make([]byte, 5+mathrand.Intn(5))
+	_, err := rand.Read(prefix)
+	if err != nil {
+		panic(err)
+	}
+	msg := append(prefix, in...)
+	seed := time.Now().Unix()
+	ctxt := encryptMT19937(msg, uint16(seed))
+	fmt.Println("original seed: ", uint16(seed))
+	return ctxt
+}
+
+func bruteForceMt19937Seed(ctxt []byte, payload []byte) uint16 {
+	for i := 0; i < 0xffff; i++ {
+		if bytes.HasSuffix(encryptMT19937(ctxt, uint16(i)), payload) {
+			return uint16(i)
+		}
+	}
+	panic("seed not found")
+}
+
+func getMT19937Token() []byte {
+	seed := time.Now().Unix()
+	fmt.Println("seed for token:  ", uint16(seed))
+	mt := initializeMT19937(uint32(seed))
+	token := make([]byte, 16)
+	for i := 0; i < 16; i += 4 {
+		token[i] = uint8(mt.extractNumber())
+	}
+	return token
+}
+
+func crackMT19937Token(token []byte) uint16 {
+	testSeed := uint32(time.Now().Unix())
+	for {
+		if uint8(initializeMT19937(uint32(testSeed)).extractNumber()) == token[0] {
+			return uint16(testSeed)
+		}
+		testSeed--
+	}
 }
