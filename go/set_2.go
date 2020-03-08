@@ -53,13 +53,14 @@ func aesCbcDecrypt(ciphertext []byte, passphrase []byte, iv []byte) []byte {
 	if len(ciphertext)%blockSize != 0 {
 		panic("padding required for ciphertext in aesCbcDecrypt")
 	}
-
 	plaintext := make([]byte, len(ciphertext))
 
 	for i := 0; i < len(ciphertext); i += blockSize {
 		copy(plaintext[i:i+blockSize], xor(iv, aesEcbDecrypt(ciphertext[i:i+blockSize], passphrase)))
 		iv = ciphertext[i : i+blockSize]
 	}
+	// fmt.Println("post decryption: ")
+	// fmt.Println(len(plaintext))
 	return plaintext
 }
 
@@ -224,7 +225,7 @@ func pkcs7UnPadding(in []byte) ([]byte, error) {
 	}
 	lastByte := in[len(in)-1]
 	if int(lastByte) < 1 || int(lastByte) > len(in) {
-		return nil, nil
+		return in, nil
 	}
 	for i := 0; i < int(lastByte); i++ {
 		if int(in[len(in)-1-i]) != int(lastByte) {
