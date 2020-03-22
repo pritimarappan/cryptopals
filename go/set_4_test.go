@@ -49,3 +49,35 @@ func Test27(t *testing.T) {
 		fmt.Println("key recovered incorrectly")
 	}
 }
+
+func Test28(t *testing.T) {
+	key := generateRandomBytes(16)
+	msg := bytes.Repeat([]byte{42}, 20)
+	mac := getSecretPrefixSha1(key, msg)
+	fmt.Println("Mac verification without tampering anything : ", verifySecretPrefixSha1(key, msg, mac))
+	msg[19] = 'a'
+	fmt.Println("Mac verification after tampering msg : ", verifySecretPrefixSha1(key, msg, mac))
+	msg[19] = 42
+	mac[len(mac)-1] = 'a'
+	fmt.Println("Mac verification after tampering mac : ", verifySecretPrefixSha1(key, msg, mac))
+}
+
+func Test29(t *testing.T) {
+
+	msg := bytes.Repeat([]byte{42}, 60)
+
+	h1 := newSHA1()
+	//h1.Write(key)
+	h1.Write(msg)
+	h1.checkSum()
+
+	h2 := newSHA1()
+	//h2.Write(key)
+	h2.Write(msg)
+	h2.Write(computeMDPadding(len(msg)))
+
+	if h1.h != h2.h {
+		fmt.Println("hash state don't match")
+	}
+	attackSha1()
+}
