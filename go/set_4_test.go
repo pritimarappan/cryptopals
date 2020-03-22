@@ -81,3 +81,23 @@ func Test29(t *testing.T) {
 	}
 	attackSha1()
 }
+
+func Test30(t *testing.T) {
+	msg := bytes.Repeat([]byte{42}, 60)
+
+	h1 := newMD4()
+	h1.Write(msg)
+	h1.Sum()
+
+	h2 := newMD4()
+	h2.Write(msg)
+	h2.Write(computeMD4Padding(len(msg)))
+
+	if h1.s != h2.s {
+		fmt.Println("hash state don't match")
+	} else {
+		fmt.Println("hash state match")
+	}
+
+	attackMD4()
+}

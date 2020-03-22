@@ -530,3 +530,278 @@ func attackSha1() {
 	}
 
 }
+
+// -----------------------  MD-4 ---------------------------
+
+//MD4Size of an MD4 checksum in bytes.
+const MD4Size = 16
+
+//MD4BlockSize of MD4 in bytes.
+const MD4BlockSize = 64
+
+const (
+	_Chunk = 64
+	_Init0 = 0x67452301
+	_Init1 = 0xEFCDAB89
+	_Init2 = 0x98BADCFE
+	_Init3 = 0x10325476
+)
+
+// digest represents the partial evaluation of a checksum.
+type md4 struct {
+	s   [4]uint32
+	x   [_Chunk]byte
+	nx  int
+	len uint64
+}
+
+func (d *md4) Reset() {
+	d.s[0] = _Init0
+	d.s[1] = _Init1
+	d.s[2] = _Init2
+	d.s[3] = _Init3
+	d.nx = 0
+	d.len = 0
+}
+
+// New returns a new hash.Hash computing the MD4 checksum.
+func newMD4() *md4 {
+	d := new(md4)
+	d.Reset()
+	return d
+}
+
+func (d *md4) Size() int { return MD4Size }
+
+func (d *md4) BlockSize() int { return MD4BlockSize }
+
+func (d *md4) Write(p []byte) (nn int, err error) {
+	nn = len(p)
+	d.len += uint64(nn)
+	if d.nx > 0 {
+		n := len(p)
+		if n > _Chunk-d.nx {
+			n = _Chunk - d.nx
+		}
+		for i := 0; i < n; i++ {
+			d.x[d.nx+i] = p[i]
+		}
+		d.nx += n
+		if d.nx == _Chunk {
+			_Block(d, d.x[0:])
+			d.nx = 0
+		}
+		p = p[n:]
+	}
+	n := _Block(d, p)
+	p = p[n:]
+	if len(p) > 0 {
+		d.nx = copy(d.x[:], p)
+	}
+	return
+}
+
+func (d *md4) Sum() []byte {
+
+	// Padding.  Add a 1 bit and 0 bits until 56 bytes mod 64.
+	len := d.len
+	var tmp [64]byte
+	tmp[0] = 0x80
+	if len%64 < 56 {
+		d.Write(tmp[0 : 56-len%64])
+	} else {
+		d.Write(tmp[0 : 64+56-len%64])
+	}
+
+	// Length in bits.
+	len <<= 3
+	for i := uint(0); i < 8; i++ {
+		tmp[i] = byte(len >> (8 * i))
+	}
+	d.Write(tmp[0:8])
+
+	if d.nx != 0 {
+		panic("d.nx != 0")
+	}
+
+	var in []byte
+	for _, s := range d.s {
+		in = append(in, byte(s>>0))
+		in = append(in, byte(s>>8))
+		in = append(in, byte(s>>16))
+		in = append(in, byte(s>>24))
+	}
+	return in
+}
+
+var shift1 = []uint{3, 7, 11, 19}
+var shift2 = []uint{3, 5, 9, 13}
+var shift3 = []uint{3, 9, 11, 15}
+
+var xIndex2 = []uint{0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}
+var xIndex3 = []uint{0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15}
+
+func _Block(dig *md4, p []byte) int {
+	a := dig.s[0]
+	b := dig.s[1]
+	c := dig.s[2]
+	d := dig.s[3]
+	n := 0
+	var X [16]uint32
+	for len(p) >= _Chunk {
+		aa, bb, cc, dd := a, b, c, d
+
+		j := 0
+		for i := 0; i < 16; i++ {
+			X[i] = uint32(p[j]) | uint32(p[j+1])<<8 | uint32(p[j+2])<<16 | uint32(p[j+3])<<24
+			j += 4
+		}
+
+		// If this needs to be made faster in the future,
+		// the usual trick is to unroll each of these
+		// loops by a factor of 4; that lets you replace
+		// the shift[] lookups with constants and,
+		// with suitable variable renaming in each
+		// unrolled body, delete the a, b, c, d = d, a, b, c
+		// (or you can let the optimizer do the renaming).
+		//
+		// The index variables are uint so that % by a power
+		// of two can be optimized easily by a compiler.
+
+		// Round 1.
+		for i := uint(0); i < 16; i++ {
+			x := i
+			s := shift1[i%4]
+			f := ((c ^ d) & b) ^ d
+			a += f + X[x]
+			a = a<<s | a>>(32-s)
+			a, b, c, d = d, a, b, c
+		}
+
+		// Round 2.
+		for i := uint(0); i < 16; i++ {
+			x := xIndex2[i]
+			s := shift2[i%4]
+			g := (b & c) | (b & d) | (c & d)
+			a += g + X[x] + 0x5a827999
+			a = a<<s | a>>(32-s)
+			a, b, c, d = d, a, b, c
+		}
+
+		// Round 3.
+		for i := uint(0); i < 16; i++ {
+			x := xIndex3[i]
+			s := shift3[i%4]
+			h := b ^ c ^ d
+			a += h + X[x] + 0x6ed9eba1
+			a = a<<s | a>>(32-s)
+			a, b, c, d = d, a, b, c
+		}
+
+		a += aa
+		b += bb
+		c += cc
+		d += dd
+
+		p = p[_Chunk:]
+		n += _Chunk
+	}
+
+	dig.s[0] = a
+	dig.s[1] = b
+	dig.s[2] = c
+	dig.s[3] = d
+	return n
+}
+
+//-----------------------  MD-4 ---------------------------
+
+func getSecretPrefixMD4(key []byte, msg []byte) []byte {
+	h := newMD4()
+	h.Write(key)
+	h.Write(msg)
+	mac := h.Sum()
+	return mac[:]
+}
+
+func verifySecretPrefixMD4(key []byte, msg []byte, mac []byte) bool {
+	hash := getSecretPrefixMD4(key, msg)
+	return bytes.Equal(hash[:], mac)
+}
+
+func computeMD4Padding(len int) (padding []byte) {
+
+	// Padding.  Add a 1 bit and 0 bits until 56 bytes mod 64.
+	var tmp [64]byte
+	tmp[0] = 0x80
+	if len%64 < 56 {
+		padding = append(padding, tmp[0:56-len%64]...)
+	} else {
+		padding = append(padding, tmp[0:64+56-len%64]...)
+	}
+
+	// Length in bits.
+	len <<= 3
+	for i := uint(0); i < 8; i++ {
+		tmp[i] = byte(len >> (8 * i))
+	}
+
+	padding = append(padding, tmp[0:8]...)
+	return
+}
+
+func md4Oracle() (
+	cookie []byte,
+	isAdmin func(cookie []byte) bool,
+) {
+	key := generateRandomBytes(16)
+	msg := []byte("comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon")
+	hash := getSecretPrefixMD4(key, msg)
+	cookie = append(append(cookie, hash...), msg...)
+
+	isAdmin = func(in []byte) bool {
+		mac, rcvdMsg := in[:16], in[16:]
+		if !bytes.Equal(getSecretPrefixMD4(key, rcvdMsg), mac) {
+			return false
+		}
+		return bytes.Contains(rcvdMsg, []byte(";admin=true;"))
+	}
+	return
+}
+
+func fixMD4Registers(in []byte) *md4 {
+	s := newMD4()
+	s.s[0] = binary.LittleEndian.Uint32(in[0:])
+	s.s[1] = binary.LittleEndian.Uint32(in[4:])
+	s.s[2] = binary.LittleEndian.Uint32(in[8:])
+	s.s[3] = binary.LittleEndian.Uint32(in[12:])
+	return s
+}
+
+func attackMD4() {
+	cookie, isAdmin := md4Oracle()
+	origMac, origMsg := cookie[:16], cookie[16:]
+	keyLen := 16
+
+	gluePadding := computeMD4Padding(len(origMsg) + keyLen)
+
+	s := fixMD4Registers(origMac)
+	s.len = uint64(len(origMsg) + len(gluePadding) + keyLen)
+	addMsg := []byte(";admin=true;")
+	s.Write(addMsg)
+	newMac := s.Sum()
+
+	var newMsg []byte
+	newMsg = append(newMsg, origMsg...)
+	newMsg = append(newMsg, gluePadding...)
+	newMsg = append(newMsg, addMsg...)
+
+	newCookie := append(newMac[:], newMsg...)
+
+	if isAdmin(newCookie) {
+		fmt.Println("attack successful")
+	} else {
+		fmt.Println("attack on MD4 failed")
+	}
+
+}
