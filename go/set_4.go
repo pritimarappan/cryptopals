@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func getctrOracles() (
@@ -804,4 +805,92 @@ func attackMD4() {
 		fmt.Println("attack on MD4 failed")
 	}
 
+}
+
+//-----------------------  HMACSHA1 ---------------------------
+
+func hmacSHA1(key []byte, msg []byte) []byte {
+	blockSize := 64
+	if len(key) > blockSize {
+		h := newSHA1()
+		h.Write(key)
+		mac := h.checkSum()
+		key = mac[:]
+	}
+	if len(key) < blockSize {
+		key = append(key, bytes.Repeat([]byte{0x0}, blockSize-len(key))...)
+	}
+
+	oKeyPad := xor(key, bytes.Repeat([]byte{0x5c}, blockSize))
+	iKeyPad := xor(key, bytes.Repeat([]byte{0x36}, blockSize))
+
+	//hash(o_key_pad ∥ hash(i_key_pad ∥ message))
+
+	h1 := newSHA1()
+	h1.Write(append(iKeyPad, msg...))
+	mac1 := h1.checkSum()
+
+	h2 := newSHA1()
+	h2.Write(append(oKeyPad, mac1[:]...))
+	mac2 := h2.checkSum()
+
+	return mac2[:]
+}
+
+//-----------------------  HMACSHA1 ---------------------------
+
+func insecureCompare(hmac1 []byte, hmac2 []byte) bool {
+	for i := 0; i < len(hmac1); i++ {
+		if hmac1[i] == hmac2[i] {
+			time.Sleep(time.Millisecond * 25)
+		} else {
+			return false
+		}
+	}
+	return true
+}
+
+var serverKey = generateRandomBytes(16)
+
+func simulatedServer(msg []byte, signature []byte) int {
+	expectedMac := hmacSHA1(serverKey, msg)
+	if insecureCompare(expectedMac, signature) {
+		return 200
+	}
+	return 500
+}
+
+func attackHmacTiming(msg []byte) []byte {
+	forgedSign := make([]byte, 20)
+
+	timer := func(sign []byte) time.Duration {
+		t1 := time.Now()
+		simulatedServer(msg, sign)
+		return time.Since(t1)
+	}
+
+	averageTimer := func(signature []byte) time.Duration {
+		var total time.Duration
+		for i := 0; i < 32; i++ {
+			t := timer(signature)
+			total += t
+		}
+		avg := total / 32
+		return avg
+	}
+
+	for i := 0; i < 20; i++ {
+		fmt.Println("at byte: ", i)
+		baseline := averageTimer(forgedSign)
+		for j := 0; j < 256; j++ {
+			forgedSign[i] = byte(j)
+			t := timer(forgedSign)
+			if t-baseline > (25 * time.Millisecond) {
+				fmt.Println(j)
+				break
+			}
+		}
+	}
+
+	return forgedSign
 }

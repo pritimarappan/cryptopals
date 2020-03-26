@@ -2,6 +2,9 @@ package cryptopals
 
 import (
 	"bytes"
+	"crypto/hmac"
+	cryptosha1 "crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
@@ -100,4 +103,27 @@ func Test30(t *testing.T) {
 	}
 
 	attackMD4()
+}
+
+func Test31(t *testing.T) {
+	msg := bytes.Repeat([]byte{'A'}, 60)
+	key := []byte("YELLOW SUBMARINE")
+
+	mac1 := hmacSHA1(key, msg)
+	fmt.Println(hex.EncodeToString(mac1))
+
+	mac := hmac.New(cryptosha1.New, key)
+	mac.Write(msg)
+	expectedMAC := mac.Sum(nil)
+
+	fmt.Println(bytes.Equal(mac1, expectedMAC))
+	fmt.Println(hmacSHA1(serverKey, msg))
+	sign := attackHmacTiming(msg)
+	if bytes.Equal(sign, hmacSHA1(serverKey, msg)) {
+		fmt.Println("hmac sign recovered")
+	} else {
+		fmt.Println("hmac sign recovery failed")
+		fmt.Println(sign)
+		fmt.Println(hmacSHA1(serverKey, msg))
+	}
 }
