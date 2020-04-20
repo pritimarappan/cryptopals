@@ -42,10 +42,10 @@ func Test34(t *testing.T) {
 
 	B := dhBot.dhk.pub
 
-	sA := getDhSecret(dhp.p, B, dha.pvt)
+	sAB := getDhSecret(dhp.p, B, dha.pvt)
 
 	iv := generateRandomBytes(16)
-	hash := cryptosha1.Sum(sA.Bytes())
+	hash := cryptosha1.Sum(sAB.Bytes())
 	key := hash[:16]
 	msg := []byte("Hello world")
 	msg = pkcs7Padding(msg, BLOCKSIZE)
@@ -54,6 +54,25 @@ func Test34(t *testing.T) {
 	echoedCt := dhBot.echo(append(ct, iv...))
 
 	echoedPt := aesCbcDecrypt(echoedCt[:len(echoedCt)-16], key, echoedCt[len(echoedCt)-16:])
+	echoedPt, _ = pkcs7UnPadding(echoedPt)
+	fmt.Println(string(echoedPt))
+
+	//with MITM
+	dhBotMitm := new(dhEchoBot)
+	dhBotMitm.init(dhp, dha.pub)
+
+	dhBotMB := new(dhEchoBot)
+	dhBotMB.init(dhp, p)
+
+	sAM := getDhSecret(dhp.p, dhp.p, dha.pvt)
+	iv = generateRandomBytes(16)
+	hash = cryptosha1.Sum(sAM.Bytes())
+	key = hash[:16]
+	ct = aesCbcEncrypt(msg, key, iv)
+
+	echoedCt = dhBotMB.echo(append(ct, iv...))
+
+	echoedPt = aesCbcDecrypt(echoedCt[:len(echoedCt)-16], key, echoedCt[len(echoedCt)-16:])
 	echoedPt, _ = pkcs7UnPadding(echoedPt)
 	fmt.Println(string(echoedPt))
 

@@ -54,5 +54,4 @@ func (dhBot *dhEchoBot) echo(in []byte) []byte {
 	iv := generateRandomBytes(16)
 	ct := aesCbcEncrypt(pt, key, iv)
 	return append(ct, iv...)
-
 }
