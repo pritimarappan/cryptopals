@@ -3,6 +3,7 @@ package cryptopals
 import (
 	"crypto/rand"
 	cryptosha1 "crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 )
@@ -54,4 +55,49 @@ func (dhBot *dhEchoBot) echo(in []byte) []byte {
 	iv := generateRandomBytes(16)
 	ct := aesCbcEncrypt(pt, key, iv)
 	return append(ct, iv...)
+}
+
+type srpCSParams struct {
+	N, g *big.Int
+	I    string
+	P    string
+	k    *big.Int
+}
+
+type srpServer struct {
+	params   *srpCSParams
+	salt     []byte
+	v        *big.Int
+	pub, pvt *big.Int
+}
+
+func (srv *srpServer) newSrpServer() {
+	salt := generateRandomBytes(16)
+	srv.salt = salt
+	xH := sha256.Sum256(append(salt, []byte(srv.params.P)...))
+	x := new(big.Int).SetBytes(xH[:])
+	//v=g**x % N
+	srv.v = new(big.Int).Exp(srv.params.g, x, srv.params.N)
+	srv.pvt = getSrpPrivateKey(srv.params.N)
+	//B=kv + g**b % N
+	srv.pub = new(big.Int).Mul(srv.params.k, srv.v)
+	srv.pub.Add(srv.pub, getSrpPublicKey(srv.params.g, srv.params.N, srv.pvt))
+	srv.pub.Mod(srv.pub, srv.params.N)
+}
+
+type srpClient struct {
+	params   *srpCSParams
+	pub, pvt *big.Int
+}
+
+func getSrpPublicKey(g *big.Int, p *big.Int, pvt *big.Int) *big.Int {
+	return new(big.Int).Exp(g, pvt, p)
+}
+
+func getSrpPrivateKey(p *big.Int) *big.Int {
+	pvt, err := rand.Int(rand.Reader, p)
+	if err != nil {
+		panic(err)
+	}
+	return pvt
 }
