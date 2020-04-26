@@ -60,7 +60,6 @@ func (dhBot *dhEchoBot) echo(in []byte) []byte {
 type srpCSParams struct {
 	N, g *big.Int
 	I    string
-	P    string
 	k    *big.Int
 }
 
@@ -71,10 +70,10 @@ type srpServer struct {
 	pub, pvt *big.Int
 }
 
-func (srv *srpServer) newSrpServer() {
+func (srv *srpServer) newSrpServer(password string) {
 	salt := generateRandomBytes(16)
 	srv.salt = salt
-	xH := sha256.Sum256(append(salt, []byte(srv.params.P)...))
+	xH := sha256.Sum256(append(salt, []byte(password)...))
 	x := new(big.Int).SetBytes(xH[:])
 	//v=g**x % N
 	srv.v = new(big.Int).Exp(srv.params.g, x, srv.params.N)
