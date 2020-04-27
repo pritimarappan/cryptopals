@@ -191,3 +191,29 @@ func Test36(t *testing.T) {
 func Test37(t *testing.T) {
 	//skipping 37 as key reduces to 0 for all cases
 }
+
+func Test38(t *testing.T) {
+	srpParams := new(srpCSParams)
+	srpParams.initSimpleSrpParams()
+
+	srpSrvr := new(srpServer)
+	srpSrvr.params = srpParams
+	srpSrvr.newSimpleSrpServer("pwd")
+
+	fmt.Println("srp server initialized")
+
+	srpA := new(srpClient)
+	srpA.params = srpParams
+	srpA.pvt = getSrpPrivateKey(srpA.params.N)
+	srpA.pub = getSrpPublicKey(srpA.params.g, srpA.params.N, srpA.pvt)
+
+	fmt.Println("srp client initialized")
+
+	uH := sha256.Sum256(append(srpA.pub.Bytes(), srpSrvr.pub.Bytes()...))
+	u := new(big.Int).SetBytes(uH[:])
+	cHash := srpA.generateClientHash(srpSrvr.salt, "pwd", u, srpSrvr.pub)
+
+	fmt.Println(srpSrvr.tryPassword([]byte("pwd"), srpA.pub, cHash))
+	fmt.Println(srpSrvr.tryPassword([]byte("wrongpwd"), srpA.pub, cHash))
+
+}
