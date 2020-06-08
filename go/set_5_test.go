@@ -217,3 +217,48 @@ func Test38(t *testing.T) {
 	fmt.Println(srpSrvr.tryPassword([]byte("wrongpwd"), srpA.pub, cHash))
 
 }
+
+func Test39(t *testing.T) {
+	//fmt.Println(modInverse(big.NewInt(17), big.NewInt(3120)))
+	r := new(rsa)
+	r.generateRsaKeys()
+	m := big.NewInt(42)
+	c := r.rsaEncrypt(m)
+	fmt.Println(c)
+	fmt.Println(r.rsaDecrypt(c))
+}
+
+func Test40(t *testing.T) {
+	r0 := new(rsa)
+	r0.generateRsaKeys()
+	r1 := new(rsa)
+	r1.generateRsaKeys()
+	r2 := new(rsa)
+	r2.generateRsaKeys()
+	m := big.NewInt(42)
+	c0 := r0.rsaEncrypt(m)
+	c1 := r1.rsaEncrypt(m)
+	c2 := r2.rsaEncrypt(m)
+
+	c0 = c0.Mod(c0, r0.pub.N)
+	c1 = c1.Mod(c1, r1.pub.N)
+	c2 = c2.Mod(c2, r2.pub.N)
+
+	ms0 := new(big.Int).Mul(r1.pub.N, r2.pub.N)
+	ms1 := new(big.Int).Mul(r0.pub.N, r2.pub.N)
+	ms2 := new(big.Int).Mul(r1.pub.N, r0.pub.N)
+
+	n012 := new(big.Int).Mul(r0.pub.N, new(big.Int).Mul(r1.pub.N, r2.pub.N))
+
+	result0 := new(big.Int).Mul(c0, ms0)
+	result0 = result0.Mul(result0, new(big.Int).ModInverse(ms0, r0.pub.N))
+	result1 := new(big.Int).Mul(c1, ms1)
+	result1 = result1.Mul(result1, new(big.Int).ModInverse(ms1, r1.pub.N))
+	result2 := new(big.Int).Mul(c2, ms2)
+	result2 = result2.Mul(result2, new(big.Int).ModInverse(ms2, r2.pub.N))
+
+	result := new(big.Int).Add(result0, result1)
+	result = result.Add(result, result2)
+	result = result.Mod(result, n012)
+	fmt.Println(cuberootBinarySearch(result))
+}

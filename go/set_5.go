@@ -174,3 +174,133 @@ func (srv *srpServer) tryPassword(password []byte, cpub *big.Int, cHash []byte) 
 	h.Write(srv.salt)
 	return hmac.Equal(h.Sum(nil), cHash)
 }
+
+type privateKey struct {
+	//publicKey            // public part.
+	D      *big.Int   // private exponent
+	Primes []*big.Int // prime factors of N, has >= 2 elements.
+	//Precomputed PrecomputedValues
+}
+
+type publicKey struct {
+	N *big.Int // modulus
+	E *big.Int // public exponent
+}
+
+type rsa struct {
+	pvt *privateKey
+	pub *publicKey
+}
+
+func (r *rsa) generateRsaKeys() {
+	for {
+		p, _ := rand.Prime(rand.Reader, 1024)
+		q, _ := rand.Prime(rand.Reader, 1024)
+		r.pvt = new(privateKey)
+		r.pub = new(publicKey)
+		r.pvt.Primes = []*big.Int{p, q}
+		r.pub.N = new(big.Int).Mul(p, q)
+		et := new(big.Int).Mul(new(big.Int).Sub(p, big.NewInt(1)), new(big.Int).Sub(q, big.NewInt(1)))
+		r.pub.E = big.NewInt(3)
+		r.pvt.D = modInverse(big.NewInt(3), et)
+		//fmt.Println(" modinverse output ", r.pvt.D)
+		if r.pvt.D != nil && r.pvt.D.Cmp(big.NewInt(1)) > 0 {
+			break
+		}
+	}
+}
+
+func modInverse(a *big.Int, n *big.Int) *big.Int {
+	//"""return x such that (x * a) % b == 1"""
+	var d, x *big.Int
+	d = new(big.Int)
+	x = new(big.Int)
+	z := d.GCD(x, nil, a, n)
+	if d.Cmp(big.NewInt(1)) != 0 {
+		//fmt.Println("gcd(a, b) != 1")
+		return nil
+	}
+
+	// x and y are such that g*x + n*y = 1, therefore x is the inverse element,
+
+	// but it may be negative, so convert to the range 0 <= z < |n|
+
+	if x.Cmp(big.NewInt(0)) == -1 {
+
+		z.Add(x, n)
+
+	} else {
+
+		z.Set(x)
+
+	}
+
+	return z
+
+	//return x.Mod(x, n) //x % n
+}
+
+func (r *rsa) rsaEncrypt(m *big.Int) *big.Int {
+	//c = m**e%n
+	return new(big.Int).Exp(m, r.pub.E, r.pub.N)
+}
+
+func (r *rsa) rsaDecrypt(c *big.Int) *big.Int {
+	//m = c**d%n
+	//fmt.Println("1  ", r.pvt.D)
+	//fmt.Println("2  ", r.pub.N)
+	return new(big.Int).Exp(c, r.pvt.D, r.pub.N)
+}
+
+func cubeRoot(cube *big.Int) *big.Int {
+	//adopted from mostlyharmless
+	//https://stackoverflow.com/questions/31238262/is-there-a-go-function-for-obtaining-the-cube-root-of-a-big-integer
+
+	x := new(big.Int).Rsh(cube, uint(cube.BitLen())/3) //mostlyharmless multiplies by 2 which I don't get
+	if x.Sign() == 0 {
+		panic("can't start from 0")
+	}
+	for {
+		d := new(big.Int).Exp(x, big.NewInt(3), nil)
+		d.Sub(d, cube)
+		d.Div(d, big.NewInt(3))
+		d.Div(d, x)
+		d.Div(d, x)
+		if d.Sign() == 0 {
+			break
+		}
+		x.Sub(x, d)
+	}
+	for new(big.Int).Exp(x, big.NewInt(3), nil).Cmp(cube) < 0 {
+		x.Add(x, big.NewInt(1))
+	}
+	for new(big.Int).Exp(x, big.NewInt(3), nil).Cmp(cube) > 0 {
+		x.Sub(x, big.NewInt(1))
+	}
+	// Return the cube, rounded down.
+	// if new(big.Int).Exp(x, big3, nil).Cmp(cube) != 0 {
+	// 	panic("not a cube")
+	// }
+	return x
+}
+
+func cuberootBinarySearch(cube *big.Int) *big.Int {
+	lo := big.NewInt(0)
+	hi := cube
+
+	for lo.Cmp(hi) < 0 {
+
+		mid := new(big.Int).Add(lo, hi)
+
+		mid = mid.Div(mid, big.NewInt(2))
+
+		tmp := new(big.Int).Exp(mid, big.NewInt(3), nil)
+
+		if tmp.Cmp(cube) < 0 {
+			lo = mid.Add(mid, big.NewInt(1))
+		} else {
+			hi = mid
+		}
+	}
+	return lo
+}
